@@ -21,26 +21,6 @@ from modules import sd_samplers, shared, script_callbacks, errors
 from modules.paths_internal import roboto_ttf_file
 from modules.shared import opts
 
-from PIL import Image
-import io
-
-class MyImage(Image.Image):
-    def save(self, fp, format=None, **params):
-        # First, save the image to a temporary buffer
-        temp_buffer = io.BytesIO()
-        super().save(temp_buffer, format=format, **params)
-        
-        # Get the byte data from the buffer and prepend the extra byte
-        extra_byte = b'\x00'  # This is the extra byte you want to add at the start
-        modified_byte_data = extra_byte + temp_buffer.getvalue()
-        
-        # If 'fp' is a filename, open the file for writing, else assume it's a writable stream
-        if isinstance(fp, str):
-            with open(fp, 'wb') as f:
-                f.write(modified_byte_data)
-        else:
-            fp.write(modified_byte_data)
-
 LANCZOS = (Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
 
 
@@ -550,7 +530,6 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
     For PNG images, geninfo is added to existing pnginfo dictionary using the pnginfo_section_name argument as key.
     For JPG images, there's no dictionary and geninfo just replaces the EXIF description.
     """
-    my_image = image.__class__ = MyImage
 
     if extension is None:
         extension = os.path.splitext(filename)[1]
@@ -569,7 +548,7 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         else:
             pnginfo_data = None
 
-        my_image.save(filename, format=image_format, quality=opts.jpeg_quality, pnginfo=pnginfo_data)
+        image.save(filename, format=image_format, quality=opts.jpeg_quality, pnginfo=pnginfo_data)
 
     elif extension.lower() in (".jpg", ".jpeg", ".webp"):
         if image.mode == 'RGBA':
@@ -577,7 +556,7 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
         elif image.mode == 'I;16':
             image = image.point(lambda p: p * 0.0038910505836576).convert("RGB" if extension.lower() == ".webp" else "L")
 
-        my_image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
+        image.save(filename, format=image_format, quality=opts.jpeg_quality, lossless=opts.webp_lossless)
 
         if opts.enable_pnginfo and geninfo is not None:
             exif_bytes = piexif.dump({
@@ -588,9 +567,9 @@ def save_image_with_geninfo(image, geninfo, filename, extension=None, existing_p
 
             piexif.insert(exif_bytes, filename)
     elif extension.lower() == ".gif":
-        my_image.save(filename, format=image_format, comment=geninfo)
+        image.save(filename, format=image_format, comment=geninfo)
     else:
-        my_image.save(filename, format=image_format, quality=opts.jpeg_quality)
+        image.save(filename, format=image_format, quality=opts.jpeg_quality)
 
 
 def save_image(image, path, basename, seed=None, prompt=None, extension='png', info=None, short_filename=False, no_prompt=False, grid=False, pnginfo_section_name='parameters', p=None, existing_info=None, forced_filename=None, suffix="", save_to_dirs=None):
