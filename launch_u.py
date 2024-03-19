@@ -37,6 +37,12 @@ def main():
     with launch_utils.startup_timer.subcategory("prepare environment"):
         if not args.skip_prepare_environment:
             prepare_environment()
+            
+    if args.test_server:
+        configure_for_tests()
+
+    if args.forge_ref_a1111_home:
+        launch_utils.configure_forge_reference_checkout(args.forge_ref_a1111_home)
 
 
 if __name__ == "__main__":
